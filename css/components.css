@@ -1,0 +1,65 @@
+/* forms, buttons, tables */
+.form-group {
+    margin-bottom: 15px;
+}
+.form-group label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: 500;
+}
+.form-control {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid var(--glass-border-dark);
+    border-radius: 5px;
+    background: rgba(255, 255, 255, 0.1);
+    color: var(--text-dark);
+    box-sizing: border-box;
+}
+body.light-mode .form-control {
+    background: rgba(0, 0, 0, 0.05);
+    color: var(--text-light);
+    border: 1px solid var(--glass-border-light);
+}
+
+/* Data Tables */
+.table-responsive {
+    overflow-x: auto;
+}
+.data-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+}
+.data-table th, .data-table td {
+    padding: 12px 15px;
+    text-align: left;
+    border-bottom: 1px solid var(--glass-border-dark);
+}
+body.light-mode .data-table th, body.light-mode .data-table td {
+    border-bottom: 1px solid var(--glass-border-light);
+}
+.data-table th {
+    background-color: rgba(0,0,0,0.2);
+    font-weight: 600;
+}
+body.light-mode .data-table th {
+    background-color: rgba(0,0,0,0.05);
+}
+
+/* Modals */
+.modal {
+    position: fixed;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+.modal-content {
+    width: 90%;
+    max-width: 500px;
+    max-height: 90vh;
+    overflow-y: auto;
+}

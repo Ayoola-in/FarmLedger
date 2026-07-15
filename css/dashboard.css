@@ -1,0 +1,22 @@
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 20px;
+}
+
+.metric {
+  font-size: 2rem;
+  font-weight: bold;
+  margin: 10px 0 0 0;
+  color: var(--accent-color);
+}
+
+.chart-container {
+  min-height: 300px;
+  display: flex;
+  flex-direction: column;
+}
+
+.chart-container canvas {
+  flex: 1;
+}
