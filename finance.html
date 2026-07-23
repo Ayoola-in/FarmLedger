@@ -12,6 +12,7 @@
 <body class="dark-mode">
     <div class="app-container">
         <!-- Sidebar Navigation -->
+        <div class="sidebar-overlay" id="sidebar-overlay"></div>
         <nav class="sidebar">
             <div class="brand">
                 <h2>FarmLedger</h2>
@@ -30,7 +31,10 @@
         <!-- Main Content -->
         <main class="main-content">
             <header class="top-header">
-                <h1>Finance & Accounting</h1>
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <button id="hamburger" class="hamburger btn btn-icon">☰</button>
+                    <h1 style="margin: 0;">Financials</h1>
+                </div>
                 <div class="header-actions">
                     <button id="theme-toggle" class="btn btn-icon">Toggle Theme</button>
                 </div>

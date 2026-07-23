@@ -30,4 +30,21 @@ document.addEventListener('DOMContentLoaded', () => {
     if(savedTheme) {
         document.body.className = savedTheme;
     }
+
+    // Sidebar Mobile Toggle
+    const hamburger = document.getElementById('hamburger');
+    const sidebar = document.querySelector('.sidebar');
+    const sidebarOverlay = document.getElementById('sidebar-overlay');
+
+    if (hamburger && sidebar && sidebarOverlay) {
+        hamburger.addEventListener('click', () => {
+            sidebar.classList.toggle('active');
+            sidebarOverlay.classList.toggle('active');
+        });
+
+        sidebarOverlay.addEventListener('click', () => {
+            sidebar.classList.remove('active');
+            sidebarOverlay.classList.remove('active');
+        });
+    }
 });

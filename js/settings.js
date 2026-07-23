@@ -98,11 +98,5 @@ document.addEventListener('DOMContentLoaded', async () => {
 async function addRecordWithoutId(storeName, item) {
     // If you want to keep relations, you should delete the DB and re-insert with explicit IDs, 
     // but put() allows inserting with specific ID if keyPath is id.
-    return new Promise((resolve, reject) => {
-        const transaction = db.transaction([storeName], 'readwrite');
-        const store = transaction.objectStore(storeName);
-        const request = store.put(item); // put will overwrite or add with the same ID
-        request.onsuccess = () => resolve();
-        request.onerror = () => reject(request.error);
-    });
+    return window.putRecord(storeName, item);
 }

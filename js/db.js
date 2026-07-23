@@ -80,8 +80,19 @@ const getRecord = (storeName, id) => {
     });
 };
 
+const putRecord = (storeName, item) => {
+    return new Promise((resolve, reject) => {
+        const transaction = db.transaction([storeName], 'readwrite');
+        const store = transaction.objectStore(storeName);
+        const request = store.put(item);
+        request.onsuccess = () => resolve();
+        request.onerror = () => reject(request.error);
+    });
+};
+
 // Expose to window for easy access
 window.initDB = initDB;
 window.addRecord = addRecord;
 window.getAllRecords = getAllRecords;
 window.getRecord = getRecord;
+window.putRecord = putRecord;
