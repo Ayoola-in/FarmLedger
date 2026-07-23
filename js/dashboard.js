@@ -26,7 +26,11 @@ async function loadDashboardMetrics() {
 
         // 3. Feed Stock
         const feedInv = await window.getAllRecords('feed_inventory');
-        const feedStock = feedInv.reduce((acc, f) => acc + (f.quantityKg || 0), 0);
+        const totalPurchased = feedInv.reduce((acc, f) => acc + (f.quantityKg || 0), 0);
+        const totalConsumed = dailyRecords
+            .filter(r => r.type === 'FEED_CONSUMPTION')
+            .reduce((acc, r) => acc + (r.quantityKg || 0), 0);
+        const feedStock = totalPurchased - totalConsumed;
         document.getElementById('metric-feed-stock').innerText = feedStock.toFixed(1) + ' kg';
 
         // 4. Net Profit

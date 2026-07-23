@@ -94,7 +94,15 @@ async function loadFeed() {
             tableBody.appendChild(tr);
         });
 
-        document.getElementById('metric-feed-total').innerText = totalQty.toFixed(1) + ' kg';
+        // Calculate consumed
+        const dailyRecords = await window.getAllRecords('daily_records');
+        const totalConsumed = dailyRecords
+            .filter(r => r.type === 'FEED_CONSUMPTION')
+            .reduce((acc, r) => acc + (r.quantityKg || 0), 0);
+
+        const currentStock = totalQty - totalConsumed;
+
+        document.getElementById('metric-feed-total').innerText = currentStock.toFixed(1) + ' kg';
         document.getElementById('metric-feed-value').innerText = window.formatCurrency(totalValue);
 
     } catch(err) {
