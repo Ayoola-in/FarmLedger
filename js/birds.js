@@ -129,7 +129,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const qty = parseFloat(document.getElementById('log-feed-qty').value);
         const feedType = document.getElementById('log-feed-type').value;
         
-        // Calculate avg cost for this specific feed type
+        // Calculate avg cost and total purchased for this specific feed type
         const feedInv = await window.getAllRecords('feed_inventory');
         const typeFeeds = feedInv.filter(f => (f.type || 'Other') === feedType);
         
@@ -137,6 +137,19 @@ document.addEventListener('DOMContentLoaded', () => {
         const totalKg = typeFeeds.reduce((acc, f) => acc + (f.quantityKg || 0), 0);
         const avgCost = totalKg > 0 ? (totalCost / totalKg) : 0;
         
+        // Calculate total consumed for this specific feed type
+        const dailyRecords = await window.getAllRecords('daily_records');
+        const typeConsumed = dailyRecords
+            .filter(r => r.type === 'FEED_CONSUMPTION' && (r.feedType || 'Other') === feedType)
+            .reduce((acc, r) => acc + (r.quantityKg || 0), 0);
+
+        const currentStock = totalKg - typeConsumed;
+
+        if (qty > currentStock) {
+            alert(`Insufficient feed stock for ${feedType}. Available: ${currentStock.toFixed(1)} kg. Requested: ${qty} kg.`);
+            return;
+        }
+
         const record = {
             date: document.getElementById('log-feed-date').value,
             type: 'FEED_CONSUMPTION',
