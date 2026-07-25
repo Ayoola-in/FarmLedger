@@ -63,25 +63,30 @@ async function loadFeed() {
     const tableBody = document.getElementById('feed-table-body');
     tableBody.innerHTML = '';
     
-    let totalQty = 0;
-    let totalValue = 0;
-
     try {
         const feeds = await window.getAllRecords('feed_inventory');
+        const summaryGrid = document.getElementById('feed-summary-grid');
+        if (summaryGrid) summaryGrid.innerHTML = '';
         
         if(feeds.length === 0) {
             tableBody.innerHTML = '<tr><td colspan="5" style="text-align:center;">No feed purchases recorded.</td></tr>';
-            document.getElementById('metric-feed-total').innerText = '0 kg';
-            document.getElementById('metric-feed-value').innerText = window.formatCurrency(0);
+            if (summaryGrid) {
+                summaryGrid.innerHTML = '<div class="card glass-card"><h3>Total Feed Stock</h3><p class="metric">0 kg</p></div>';
+            }
             return;
         }
 
         // Sort by date descending
         feeds.sort((a, b) => new Date(b.date) - new Date(a.date));
 
+        const feedStats = {};
+
         feeds.forEach(feed => {
-            totalQty += feed.quantityKg;
-            totalValue += feed.totalCost;
+            const type = feed.type || 'Other';
+            if (!feedStats[type]) feedStats[type] = { qtyPurchased: 0, value: 0, qtyConsumed: 0 };
+            
+            feedStats[type].qtyPurchased += feed.quantityKg;
+            feedStats[type].value += feed.totalCost;
 
             const tr = document.createElement('tr');
             tr.innerHTML = `
@@ -94,16 +99,28 @@ async function loadFeed() {
             tableBody.appendChild(tr);
         });
 
-        // Calculate consumed
+        // Calculate consumed per type
         const dailyRecords = await window.getAllRecords('daily_records');
-        const totalConsumed = dailyRecords
-            .filter(r => r.type === 'FEED_CONSUMPTION')
-            .reduce((acc, r) => acc + (r.quantityKg || 0), 0);
+        dailyRecords.forEach(r => {
+            if (r.type === 'FEED_CONSUMPTION') {
+                const type = r.feedType || 'Other'; // Fallback for old records
+                if (!feedStats[type]) feedStats[type] = { qtyPurchased: 0, value: 0, qtyConsumed: 0 };
+                feedStats[type].qtyConsumed += (r.quantityKg || 0);
+            }
+        });
 
-        const currentStock = totalQty - totalConsumed;
-
-        document.getElementById('metric-feed-total').innerText = currentStock.toFixed(1) + ' kg';
-        document.getElementById('metric-feed-value').innerText = window.formatCurrency(totalValue);
+        if (summaryGrid) {
+            for (const [type, stats] of Object.entries(feedStats)) {
+                const currentStock = stats.qtyPurchased - stats.qtyConsumed;
+                
+                summaryGrid.innerHTML += `
+                    <div class="card glass-card">
+                        <h3>${type} Feed</h3>
+                        <p class="metric">${currentStock.toFixed(1)} kg</p>
+                    </div>
+                `;
+            }
+        }
 
     } catch(err) {
         console.error("Failed to load feed", err);

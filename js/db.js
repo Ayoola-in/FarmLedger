@@ -1,5 +1,5 @@
 const dbName = 'FarmLedgerDB';
-const dbVersion = 1;
+const dbVersion = 2;
 let db;
 
 const initDB = () => {
@@ -41,6 +41,9 @@ const initDB = () => {
             }
             if (!db.objectStoreNames.contains('settings')) {
                 db.createObjectStore('settings', { keyPath: 'key' });
+            }
+            if (!db.objectStoreNames.contains('vaccines')) {
+                db.createObjectStore('vaccines', { keyPath: 'id', autoIncrement: true });
             }
         };
     });

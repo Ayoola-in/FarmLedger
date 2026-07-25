@@ -86,41 +86,61 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // Sub-form toggles
-    document.getElementById('btn-log-feed').addEventListener('click', () => {
-        document.getElementById('subform-feed').style.display = 'block';
+    const hideAllSubforms = () => {
+        document.getElementById('subform-feed').style.display = 'none';
         document.getElementById('subform-expense').style.display = 'none';
         document.getElementById('subform-mortality').style.display = 'none';
+        document.getElementById('subform-edit-qty').style.display = 'none';
+        document.getElementById('subform-vaccine').style.display = 'none';
+    };
+
+    document.getElementById('btn-log-feed').addEventListener('click', () => {
+        hideAllSubforms();
+        document.getElementById('subform-feed').style.display = 'block';
         document.getElementById('log-feed-date').valueAsDate = new Date();
     });
 
     document.getElementById('btn-log-expense').addEventListener('click', () => {
-        document.getElementById('subform-feed').style.display = 'none';
+        hideAllSubforms();
         document.getElementById('subform-expense').style.display = 'block';
-        document.getElementById('subform-mortality').style.display = 'none';
         document.getElementById('log-expense-date').valueAsDate = new Date();
     });
 
     document.getElementById('btn-log-mortality').addEventListener('click', () => {
-        document.getElementById('subform-feed').style.display = 'none';
-        document.getElementById('subform-expense').style.display = 'none';
+        hideAllSubforms();
         document.getElementById('subform-mortality').style.display = 'block';
         document.getElementById('log-mortality-date').valueAsDate = new Date();
+    });
+
+    document.getElementById('btn-edit-flock-qty').addEventListener('click', () => {
+        hideAllSubforms();
+        document.getElementById('subform-edit-qty').style.display = 'block';
+    });
+
+    document.getElementById('btn-log-vaccine').addEventListener('click', () => {
+        hideAllSubforms();
+        document.getElementById('subform-vaccine').style.display = 'block';
+        document.getElementById('log-vaccine-date').valueAsDate = new Date();
     });
 
     // Form Submissions
     document.getElementById('form-log-feed').addEventListener('submit', async (e) => {
         e.preventDefault();
         const qty = parseFloat(document.getElementById('log-feed-qty').value);
+        const feedType = document.getElementById('log-feed-type').value;
         
-        // Calculate global avg cost
+        // Calculate avg cost for this specific feed type
         const feedInv = await window.getAllRecords('feed_inventory');
-        const totalCost = feedInv.reduce((acc, f) => acc + (f.totalCost || 0), 0);
-        const totalKg = feedInv.reduce((acc, f) => acc + (f.quantityKg || 0), 0);
+        const typeFeeds = feedInv.filter(f => (f.type || 'Other') === feedType);
+        
+        const totalCost = typeFeeds.reduce((acc, f) => acc + (f.totalCost || 0), 0);
+        const totalKg = typeFeeds.reduce((acc, f) => acc + (f.quantityKg || 0), 0);
         const avgCost = totalKg > 0 ? (totalCost / totalKg) : 0;
         
         const record = {
             date: document.getElementById('log-feed-date').value,
             type: 'FEED_CONSUMPTION',
+            feedType: feedType,
             flockId: currentFlockId,
             quantityKg: qty,
             cost: qty * avgCost
@@ -171,6 +191,51 @@ document.addEventListener('DOMContentLoaded', () => {
         window.openFlockDetails(currentFlockId);
         loadFlocks(); // Update main table
     });
+
+    document.getElementById('form-edit-qty').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const newQty = parseInt(document.getElementById('edit-flock-qty').value);
+        
+        const flock = await window.getRecord('flocks', currentFlockId);
+        const diff = newQty - flock.quantityPurchased;
+        
+        flock.quantityPurchased = newQty;
+        flock.birdsAlive = Math.max(0, flock.birdsAlive + diff); // adjust alive by same difference
+        
+        await window.putRecord('flocks', flock);
+        
+        document.getElementById('subform-edit-qty').style.display = 'none';
+        document.getElementById('form-edit-qty').reset();
+        window.openFlockDetails(currentFlockId);
+        loadFlocks(); // Update main table
+    });
+
+    document.getElementById('form-log-vaccine').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        const vaccineRecord = {
+            date: document.getElementById('log-vaccine-date').value,
+            flockId: currentFlockId,
+            type: document.getElementById('log-vaccine-type').value,
+            cost: parseFloat(document.getElementById('log-vaccine-cost').value)
+        };
+        
+        await window.addRecord('vaccines', vaccineRecord);
+        
+        // Also log as an expense
+        const expense = {
+            date: vaccineRecord.date,
+            category: 'Vaccine',
+            flockId: currentFlockId,
+            description: `Vaccine: ${vaccineRecord.type}`,
+            amount: vaccineRecord.cost
+        };
+        await window.addRecord('expenses', expense);
+        
+        document.getElementById('subform-vaccine').style.display = 'none';
+        document.getElementById('form-log-vaccine').reset();
+        window.openFlockDetails(currentFlockId);
+    });
 });
 
 window.openFlockDetails = async (id) => {
@@ -181,6 +246,7 @@ window.openFlockDetails = async (id) => {
         if (!flock) return;
         
         document.getElementById('view-flock-name').innerText = `Flock: ${flock.name}`;
+        document.getElementById('edit-flock-qty').value = flock.quantityPurchased;
         
         // Age calculation
         const pDate = new Date(flock.purchaseDate);
@@ -197,19 +263,28 @@ window.openFlockDetails = async (id) => {
             .filter(r => r.flockId === id && r.type === 'FEED_CONSUMPTION')
             .reduce((acc, r) => acc + (r.cost || 0), 0);
             
-        // Other Expenses
+        // Other Expenses (excluding vaccines which are a separate category now if we want, but earlier expenses might just be 'Flock Specific')
         const expenses = await window.getAllRecords('expenses');
         const otherCost = expenses
-            .filter(r => r.flockId === id)
+            .filter(r => r.flockId === id && r.category !== 'Vaccine')
             .reduce((acc, r) => acc + (r.amount || 0), 0);
             
-        const totalSpent = flock.cost + feedCost + otherCost;
+        // Vaccines
+        const vaccines = await window.getAllRecords('vaccines') || [];
+        const vaccineCost = vaccines
+            .filter(r => r.flockId === id)
+            .reduce((acc, r) => acc + (r.cost || 0), 0);
+            
+        const totalSpent = flock.cost + feedCost + otherCost + vaccineCost;
         
         const costPerBird = flock.birdsAlive > 0 ? (totalSpent / flock.birdsAlive) : 0;
         
         document.getElementById('detail-cost-initial').innerText = window.formatCurrency(flock.cost);
         document.getElementById('detail-cost-feed').innerText = window.formatCurrency(feedCost);
         document.getElementById('detail-cost-other').innerText = window.formatCurrency(otherCost);
+        if (document.getElementById('detail-cost-vaccine')) {
+            document.getElementById('detail-cost-vaccine').innerText = window.formatCurrency(vaccineCost);
+        }
         document.getElementById('detail-cost-total').innerText = window.formatCurrency(totalSpent);
         document.getElementById('detail-flock-cost-per-bird').innerText = window.formatCurrency(costPerBird);
         
