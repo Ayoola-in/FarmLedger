@@ -55,8 +55,9 @@ async function loadDashboardMetrics() {
 }
 
 function renderEggChart(dailyRecords) {
-    const ctx = document.getElementById('eggChart');
-    if (!ctx) return;
+    const canvas = document.getElementById('eggChart');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
     
     const eggRecords = dailyRecords.filter(r => r.type === 'EGG_COLLECTION');
     const labels = [];
@@ -75,26 +76,62 @@ function renderEggChart(dailyRecords) {
         data.push(dayTotal);
     }
 
-    new Chart(ctx, {
+    const gradient = ctx.createLinearGradient(0, 0, 0, 350);
+    gradient.addColorStop(0, 'rgba(16, 185, 129, 0.4)');
+    gradient.addColorStop(1, 'rgba(16, 185, 129, 0.0)');
+
+    new Chart(canvas, {
         type: 'line',
         data: {
             labels: labels,
             datasets: [{
                 label: 'Eggs Collected',
                 data: data,
-                borderColor: '#2e7d32',
-                backgroundColor: 'rgba(46, 125, 50, 0.2)',
-                tension: 0.3,
+                borderColor: '#10b981',
+                backgroundColor: gradient,
+                borderWidth: 3,
+                pointBackgroundColor: '#10b981',
+                pointBorderColor: '#fff',
+                pointHoverBackgroundColor: '#fff',
+                pointHoverBorderColor: '#10b981',
+                pointRadius: 4,
+                pointHoverRadius: 6,
+                tension: 0.4,
                 fill: true
             }]
         },
-        options: { responsive: true, maintainAspectRatio: false }
+        options: { 
+            responsive: true, 
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    backgroundColor: 'rgba(15, 23, 42, 0.9)',
+                    titleFont: { family: 'Outfit', size: 13 },
+                    bodyFont: { family: 'Outfit', size: 14, weight: 'bold' },
+                    padding: 12,
+                    cornerRadius: 8,
+                    displayColors: false
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    grid: { color: 'rgba(255, 255, 255, 0.05)', borderDash: [5, 5] },
+                    ticks: { font: { family: 'Outfit' } }
+                },
+                x: {
+                    grid: { display: false },
+                    ticks: { font: { family: 'Outfit' } }
+                }
+            }
+        }
     });
 }
 
 function renderFinanceChart(sales, expenses) {
-    const ctx = document.getElementById('financeChart');
-    if (!ctx) return;
+    const canvas = document.getElementById('financeChart');
+    if (!canvas) return;
     
     const labels = [];
     const revData = [];
@@ -118,7 +155,7 @@ function renderFinanceChart(sales, expenses) {
         expData.push(dayExp);
     }
 
-    new Chart(ctx, {
+    new Chart(canvas, {
         type: 'bar',
         data: {
             labels: labels,
@@ -126,15 +163,46 @@ function renderFinanceChart(sales, expenses) {
                 {
                     label: 'Revenue',
                     data: revData,
-                    backgroundColor: '#2e7d32'
+                    backgroundColor: '#10b981',
+                    borderRadius: 6,
+                    borderSkipped: false
                 },
                 {
                     label: 'Expenses',
                     data: expData,
-                    backgroundColor: '#ffb300'
+                    backgroundColor: '#f59e0b',
+                    borderRadius: 6,
+                    borderSkipped: false
                 }
             ]
         },
-        options: { responsive: true, maintainAspectRatio: false }
+        options: { 
+            responsive: true, 
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'top',
+                    labels: { font: { family: 'Outfit' }, usePointStyle: true, pointStyle: 'circle' }
+                },
+                tooltip: {
+                    backgroundColor: 'rgba(15, 23, 42, 0.9)',
+                    titleFont: { family: 'Outfit', size: 13 },
+                    bodyFont: { family: 'Outfit', size: 14 },
+                    padding: 12,
+                    cornerRadius: 8
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    grid: { color: 'rgba(255, 255, 255, 0.05)', borderDash: [5, 5] },
+                    ticks: { font: { family: 'Outfit' } }
+                },
+                x: {
+                    grid: { display: false },
+                    ticks: { font: { family: 'Outfit' } }
+                }
+            }
+        }
     });
 }

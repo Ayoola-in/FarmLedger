@@ -7,7 +7,8 @@
     <link rel="manifest" href="manifest.json">
     <link rel="stylesheet" href="css/main.css">
     <link rel="stylesheet" href="css/components.css">
-    <meta name="theme-color" content="#2e7d32">
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <meta name="theme-color" content="#10b981">
 </head>
 <body class="dark-mode">
     <div class="app-container">
@@ -15,29 +16,31 @@
         <div class="sidebar-overlay" id="sidebar-overlay"></div>
         <nav class="sidebar">
             <div class="brand">
+                <img src="assets/logo.png" alt="FarmLedger Logo" class="brand-logo">
                 <h2>FarmLedger</h2>
             </div>
             <ul class="nav-links">
-                <li><a href="index.html">Dashboard</a></li>
-                <li><a href="birds.html">Birds</a></li>
-                <li><a href="eggs.html">Eggs</a></li>
-                <li><a href="feed.html" class="active">Feed</a></li>
-                <li><a href="vaccines.html">Vaccines</a></li>
-                <li><a href="finance.html">Finance</a></li>
-                <li><a href="reports.html">Reports</a></li>
-                <li><a href="settings.html">Settings</a></li>
+                <li><a href="index.html"><i class="ph ph-squares-four"></i> Dashboard</a></li>
+                <li><a href="birds.html"><i class="ph ph-bird"></i> Birds</a></li>
+                <li><a href="eggs.html"><i class="ph ph-egg"></i> Eggs</a></li>
+                <li><a href="feed.html" class="active"><i class="ph ph-grain"></i> Feed</a></li>
+                <li><a href="vaccines.html"><i class="ph ph-syringe"></i> Vaccines</a></li>
+                <li><a href="finance.html"><i class="ph ph-currency-circle-dollar"></i> Finance</a></li>
+                <li><a href="reports.html"><i class="ph ph-chart-line-up"></i> Reports</a></li>
+                <li><a href="settings.html"><i class="ph ph-gear"></i> Settings</a></li>
             </ul>
         </nav>
 
         <!-- Main Content -->
         <main class="main-content">
             <header class="top-header">
+                <img src="assets/logo.png" class="print-only-logo" alt="FarmLedger Logo">
                 <div style="display: flex; align-items: center; gap: 10px;">
                     <button id="hamburger" class="hamburger btn btn-icon">☰</button>
                     <h1 style="margin: 0;">Feed Inventory</h1>
                 </div>
                 <div class="header-actions">
-                    <button id="theme-toggle" class="btn btn-icon">Toggle Theme</button>
+                    <button id="theme-toggle" class="btn btn-icon" title="Toggle Theme"><i class="ph ph-moon" style="font-size: 20px;"></i></button>
                 </div>
             </header>
 
@@ -48,7 +51,7 @@
             <div class="glass-card" style="margin-bottom: 20px;">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
                     <h2>Feed Inventory</h2>
-                    <button class="btn" id="btn-add-feed">+ Record Purchase</button>
+                    <button class="btn" id="btn-add-feed"><i class="ph ph-plus"></i> Add Feed Stock</button>
                 </div>
                 
                 <div class="table-responsive">

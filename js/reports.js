@@ -82,16 +82,29 @@ function renderExpenseChart(expenseMap) {
             datasets: [{
                 data: data,
                 backgroundColor: [
-                    '#2e7d32', '#ffb300', '#e53935', '#1976d2', '#8e24aa', '#f4511e'
+                    '#10b981', '#f59e0b', '#ef4444', '#3b82f6', '#8b5cf6', '#ec4899'
                 ],
-                borderWidth: 0
+                hoverOffset: 10,
+                borderWidth: 2,
+                borderColor: '#0f172a'
             }]
         },
         options: { 
             responsive: true, 
             maintainAspectRatio: false,
+            cutout: '70%',
             plugins: {
-                legend: { position: 'bottom' }
+                legend: { 
+                    position: 'bottom',
+                    labels: { font: { family: 'Outfit' }, color: '#f1f5f9', usePointStyle: true, padding: 20 }
+                },
+                tooltip: {
+                    backgroundColor: 'rgba(15, 23, 42, 0.9)',
+                    titleFont: { family: 'Outfit', size: 13 },
+                    bodyFont: { family: 'Outfit', size: 14, weight: 'bold' },
+                    padding: 12,
+                    cornerRadius: 8
+                }
             }
         }
     });

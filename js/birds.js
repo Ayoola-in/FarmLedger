@@ -85,41 +85,28 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('modal-view-flock').style.display = 'none';
     });
 
-    // Sub-form toggles
-    const hideAllSubforms = () => {
-        document.getElementById('subform-feed').style.display = 'none';
-        document.getElementById('subform-expense').style.display = 'none';
-        document.getElementById('subform-mortality').style.display = 'none';
-        document.getElementById('subform-edit-qty').style.display = 'none';
-        document.getElementById('subform-vaccine').style.display = 'none';
-    };
-
+    // Sub-modal toggles
     document.getElementById('btn-log-feed').addEventListener('click', () => {
-        hideAllSubforms();
-        document.getElementById('subform-feed').style.display = 'block';
+        document.getElementById('modal-log-feed').style.display = 'flex';
         document.getElementById('log-feed-date').valueAsDate = new Date();
     });
 
     document.getElementById('btn-log-expense').addEventListener('click', () => {
-        hideAllSubforms();
-        document.getElementById('subform-expense').style.display = 'block';
+        document.getElementById('modal-log-expense').style.display = 'flex';
         document.getElementById('log-expense-date').valueAsDate = new Date();
     });
 
     document.getElementById('btn-log-mortality').addEventListener('click', () => {
-        hideAllSubforms();
-        document.getElementById('subform-mortality').style.display = 'block';
+        document.getElementById('modal-log-mortality').style.display = 'flex';
         document.getElementById('log-mortality-date').valueAsDate = new Date();
     });
 
     document.getElementById('btn-edit-flock-qty').addEventListener('click', () => {
-        hideAllSubforms();
-        document.getElementById('subform-edit-qty').style.display = 'block';
+        document.getElementById('modal-edit-qty').style.display = 'flex';
     });
 
     document.getElementById('btn-log-vaccine').addEventListener('click', () => {
-        hideAllSubforms();
-        document.getElementById('subform-vaccine').style.display = 'block';
+        document.getElementById('modal-log-vaccine').style.display = 'flex';
         document.getElementById('log-vaccine-date').valueAsDate = new Date();
     });
 
@@ -160,7 +147,7 @@ document.addEventListener('DOMContentLoaded', () => {
         };
         
         await window.addRecord('daily_records', record);
-        document.getElementById('subform-feed').style.display = 'none';
+        document.getElementById('modal-log-feed').style.display = 'none';
         document.getElementById('form-log-feed').reset();
         window.openFlockDetails(currentFlockId);
     });
@@ -176,7 +163,7 @@ document.addEventListener('DOMContentLoaded', () => {
         };
         
         await window.addRecord('expenses', expense);
-        document.getElementById('subform-expense').style.display = 'none';
+        document.getElementById('modal-log-expense').style.display = 'none';
         document.getElementById('form-log-expense').reset();
         window.openFlockDetails(currentFlockId);
     });
@@ -199,7 +186,7 @@ document.addEventListener('DOMContentLoaded', () => {
         flock.birdsAlive = Math.max(0, flock.birdsAlive - qty);
         await window.putRecord('flocks', flock);
         
-        document.getElementById('subform-mortality').style.display = 'none';
+        document.getElementById('modal-log-mortality').style.display = 'none';
         document.getElementById('form-log-mortality').reset();
         window.openFlockDetails(currentFlockId);
         loadFlocks(); // Update main table
@@ -217,7 +204,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         await window.putRecord('flocks', flock);
         
-        document.getElementById('subform-edit-qty').style.display = 'none';
+        document.getElementById('modal-edit-qty').style.display = 'none';
         document.getElementById('form-edit-qty').reset();
         window.openFlockDetails(currentFlockId);
         loadFlocks(); // Update main table
@@ -245,7 +232,7 @@ document.addEventListener('DOMContentLoaded', () => {
         };
         await window.addRecord('expenses', expense);
         
-        document.getElementById('subform-vaccine').style.display = 'none';
+        document.getElementById('modal-log-vaccine').style.display = 'none';
         document.getElementById('form-log-vaccine').reset();
         window.openFlockDetails(currentFlockId);
     });

@@ -1,11 +1,69 @@
-document.addEventListener('DOMContentLoaded', async () => {
-    try {
-        await window.initDB();
-        loadVaccines();
-    } catch (e) {
-        console.error("DB Init failed", e);
-    }
-});
+    const modal = document.getElementById('modal-add-vaccine');
+    const btnAdd = document.getElementById('btn-add-vaccine');
+    const btnCancel = document.getElementById('btn-cancel-vaccine');
+    const form = document.getElementById('form-add-vaccine');
+    const flockSelect = document.getElementById('vaccine-flock');
+
+    document.addEventListener('DOMContentLoaded', async () => {
+        try {
+            await window.initDB();
+            loadVaccines();
+
+            // Populate flocks dropdown
+            const flocks = await window.getAllRecords('flocks') || [];
+            flocks.filter(f => f.status === 'Active').forEach(f => {
+                const opt = document.createElement('option');
+                opt.value = f.id;
+                opt.textContent = `${f.name} (${f.breed})`;
+                flockSelect.appendChild(opt);
+            });
+        } catch (e) {
+            console.error("DB Init failed", e);
+        }
+
+        if(btnAdd) {
+            btnAdd.addEventListener('click', () => {
+                modal.style.display = 'flex';
+                document.getElementById('vaccine-date').valueAsDate = new Date();
+            });
+        }
+
+        if(btnCancel) {
+            btnCancel.addEventListener('click', () => {
+                modal.style.display = 'none';
+                form.reset();
+            });
+        }
+
+        if(form) {
+            form.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                
+                const vaccineRecord = {
+                    date: document.getElementById('vaccine-date').value,
+                    flockId: parseInt(document.getElementById('vaccine-flock').value),
+                    type: document.getElementById('vaccine-type').value,
+                    cost: parseFloat(document.getElementById('vaccine-cost').value)
+                };
+                
+                await window.addRecord('vaccines', vaccineRecord);
+                
+                // Also log as an expense
+                const expense = {
+                    date: vaccineRecord.date,
+                    category: 'Vaccine',
+                    flockId: vaccineRecord.flockId,
+                    description: `Vaccine: ${vaccineRecord.type}`,
+                    amount: vaccineRecord.cost
+                };
+                await window.addRecord('expenses', expense);
+                
+                modal.style.display = 'none';
+                form.reset();
+                loadVaccines();
+            });
+        }
+    });
 
 async function loadVaccines() {
     const tableBody = document.getElementById('vaccines-table-body');
