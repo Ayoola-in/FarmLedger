@@ -1,91 +1,20 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FarmLedger Dashboard</title>
-    <link rel="manifest" href="manifest.json">
-    <link rel="stylesheet" href="css/main.css">
-    <link rel="stylesheet" href="css/dashboard.css">
-    <link rel="stylesheet" href="css/components.css">
-    <script src="https://unpkg.com/@phosphor-icons/web"></script>
-    <meta name="theme-color" content="#10b981">
-</head>
-<body class="dark-mode">
-    <div class="app-container">
-        <!-- Sidebar Navigation -->
-        <div class="sidebar-overlay" id="sidebar-overlay"></div>
-        <nav class="sidebar">
-            <div class="brand">
-                <img src="assets/logo.png" alt="FarmLedger Logo" class="brand-logo">
-                <h2>FarmLedger</h2>
-            </div>
-            <ul class="nav-links">
-                <li><a href="index.html" class="active"><i class="ph ph-squares-four"></i> Dashboard</a></li>
-                <li><a href="birds.html"><i class="ph ph-bird"></i> Birds</a></li>
-                <li><a href="eggs.html"><i class="ph ph-egg"></i> Eggs</a></li>
-                <li><a href="feed.html"><i class="ph ph-grain"></i> Feed</a></li>
-                <li><a href="vaccines.html"><i class="ph ph-syringe"></i> Vaccines</a></li>
-                <li><a href="finance.html"><i class="ph ph-currency-circle-dollar"></i> Finance</a></li>
-                <li><a href="reports.html"><i class="ph ph-chart-line-up"></i> Reports</a></li>
-                <li><a href="settings.html"><i class="ph ph-gear"></i> Settings</a></li>
-            </ul>
-        </nav>
-
-        <!-- Main Content -->
-        <main class="main-content">
-            <header class="top-header">
-                <img src="assets/logo.png" class="print-only-logo" alt="FarmLedger Logo">
-                <div style="display: flex; align-items: center; gap: 10px;">
-                    <button id="hamburger" class="hamburger btn btn-icon">☰</button>
-                    <h1 style="margin: 0;">Dashboard</h1>
-                </div>
-                <div class="header-actions">
-                    <button id="theme-toggle" class="btn btn-icon" title="Toggle Theme"><i class="ph ph-moon" style="font-size: 20px;"></i></button>
-                </div>
-            </header>
-
-            <div class="dashboard-grid">
-                <!-- Summary Cards -->
-                <div class="card glass-card">
-                    <h3>Total Birds</h3>
-                    <p class="metric" id="metric-total-birds">Loading...</p>
-                </div>
-                <div class="card glass-card">
-                    <h3>Eggs Today</h3>
-                    <p class="metric" id="metric-eggs-today">Loading...</p>
-                </div>
-                <div class="card glass-card">
-                    <h3>Net Profit</h3>
-                    <p class="metric" id="metric-net-profit">Loading...</p>
-                </div>
-                <div class="card glass-card">
-                    <h3>Feed Stock (kg)</h3>
-                    <p class="metric" id="metric-feed-stock">Loading...</p>
-                </div>
-                
-                <!-- Charts Area -->
-                <div class="card glass-card chart-container" style="grid-column: span 2;">
-                    <h3>Egg Production (Last 7 Days)</h3>
-                    <div class="chart-wrapper">
-                        <canvas id="eggChart"></canvas>
-                    </div>
-                </div>
-                <div class="card glass-card chart-container" style="grid-column: span 2;">
-                    <h3>Financial Overview</h3>
-                    <div class="chart-wrapper">
-                        <canvas id="financeChart"></canvas>
-                    </div>
-                </div>
-            </div>
-        </main>
-    </div>
-
-    <!-- Scripts -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="js/db.js"></script>
-    <script src="js/utils.js"></script>
-    <script src="js/app.js"></script>
-    <script src="js/dashboard.js"></script>
-</body>
+<!doctype html>
+<html lang="en-NG">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>FarmLedger: poultry farm records that work offline</title>
+    <meta name="description" content="Track flocks, eggs, feed, vaccines and profit from your phone, even with no signal. Built for poultry farms." />
+    <meta name="theme-color" content="#16191b" />
+    <link rel="icon" href="/icons/favicon-64.png" type="image/png" />
+    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+    <meta property="og:title" content="FarmLedger" />
+    <meta property="og:description" content="Poultry farm records and accounts that work offline." />
+    <meta property="og:image" content="/icons/icon-512.png" />
+  </head>
+  <body>
+    <div id="root"></div>
+    <noscript>FarmLedger needs JavaScript to run.</noscript>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
 </html>
