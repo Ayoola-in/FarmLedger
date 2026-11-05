@@ -11,11 +11,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     const btnAdd = document.getElementById('btn-add-eggs');
     const btnCancel = document.getElementById('btn-cancel-eggs');
     const form = document.getElementById('form-add-eggs');
+    let editingEggId = null;
     
     // Default to today
     document.getElementById('egg-date').valueAsDate = new Date();
 
     btnAdd.addEventListener('click', () => {
+        editingEggId = null;
+        document.querySelector('#modal-add-eggs h2').textContent = 'Record Egg Collection';
+        form.reset();
+        document.getElementById('egg-date').valueAsDate = new Date();
         modal.style.display = 'flex';
     });
 
@@ -23,6 +28,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         modal.style.display = 'none';
         form.reset();
         document.getElementById('egg-date').valueAsDate = new Date();
+        editingEggId = null;
     });
 
     form.addEventListener('submit', async (e) => {
@@ -48,17 +54,59 @@ document.addEventListener('DOMContentLoaded', async () => {
         };
 
         try {
-            await window.addRecord('daily_records', dailyRecord);
+            if (editingEggId) {
+                const existingRecord = await window.getRecord('daily_records', editingEggId);
+                if (existingRecord) {
+                    existingRecord.date = dailyRecord.date;
+                    existingRecord.flockId = dailyRecord.flockId;
+                    existingRecord.eggsCollected = dailyRecord.eggsCollected;
+                    existingRecord.brokenEggs = dailyRecord.brokenEggs;
+                    existingRecord.dirtyEggs = dailyRecord.dirtyEggs;
+                    await window.putRecord('daily_records', existingRecord);
+                }
+            } else {
+                await window.addRecord('daily_records', dailyRecord);
+            }
 
             modal.style.display = 'none';
             form.reset();
             document.getElementById('egg-date').valueAsDate = new Date();
+            editingEggId = null;
             loadEggRecords();
         } catch(err) {
             console.error("Error saving egg record", err);
             alert("Could not save egg record.");
         }
     });
+
+    window.editEggRecord = async (id) => {
+        try {
+            const record = await window.getRecord('daily_records', id);
+            if (!record) return;
+            editingEggId = id;
+            document.querySelector('#modal-add-eggs h2').textContent = 'Edit Egg Collection';
+            document.getElementById('egg-date').value = record.date;
+            document.getElementById('egg-flock').value = record.flockId;
+            document.getElementById('egg-total').value = record.eggsCollected;
+            document.getElementById('egg-broken').value = record.brokenEggs || 0;
+            document.getElementById('egg-dirty').value = record.dirtyEggs || 0;
+            modal.style.display = 'flex';
+        } catch (err) {
+            console.error("Error loading record for edit", err);
+        }
+    };
+
+    window.deleteEggRecord = async (id) => {
+        if(confirm("Are you sure you want to delete this record?")) {
+            try {
+                await window.deleteRecord('daily_records', id);
+                loadEggRecords();
+            } catch (err) {
+                console.error("Error deleting record", err);
+                alert("Could not delete record.");
+            }
+        }
+    };
 });
 
 async function loadFlocksForSelect() {
@@ -98,7 +146,7 @@ async function loadEggRecords() {
         const eggRecords = records.filter(r => r.type === 'EGG_COLLECTION');
         
         if(eggRecords.length === 0) {
-            tableBody.innerHTML = '<tr><td colspan="5" style="text-align:center;">No egg records found.</td></tr>';
+            tableBody.innerHTML = '<tr><td colspan="6" style="text-align:center;">No egg records found.</td></tr>';
             document.getElementById('metric-eggs-today').innerText = '0';
             document.getElementById('metric-eggs-good').innerText = '0';
             document.getElementById('metric-eggs-bad').innerText = '0';
@@ -130,6 +178,10 @@ async function loadEggRecords() {
                 <td>${record.eggsCollected}</td>
                 <td>${good}</td>
                 <td style="color: #e53935;">${bad}</td>
+                <td>
+                    <button class="btn btn-icon" onclick="window.editEggRecord(${record.id})" title="Edit"><i class="ph ph-pencil-simple"></i></button>
+                    <button class="btn btn-icon" onclick="window.deleteEggRecord(${record.id})" title="Delete" style="color: #e53935;"><i class="ph ph-trash"></i></button>
+                </td>
             `;
             tableBody.appendChild(tr);
         });

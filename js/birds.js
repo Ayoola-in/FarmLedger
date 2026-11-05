@@ -10,14 +10,19 @@ document.addEventListener('DOMContentLoaded', async () => {
     const btnAdd = document.getElementById('btn-add-flock');
     const btnCancel = document.getElementById('btn-cancel-flock');
     const form = document.getElementById('form-add-flock');
+    let editingFlockId = null;
 
     btnAdd.addEventListener('click', () => {
+        editingFlockId = null;
+        document.querySelector('#modal-add-flock h2').textContent = 'Register New Flock';
+        form.reset();
         modal.style.display = 'flex';
     });
 
     btnCancel.addEventListener('click', () => {
         modal.style.display = 'none';
         form.reset();
+        editingFlockId = null;
     });
 
     form.addEventListener('submit', async (e) => {
@@ -35,15 +40,60 @@ document.addEventListener('DOMContentLoaded', async () => {
         };
 
         try {
-            await window.addRecord('flocks', flock);
+            if (editingFlockId) {
+                const existing = await window.getRecord('flocks', editingFlockId);
+                if (existing) {
+                    const qtyDiff = flock.quantityPurchased - existing.quantityPurchased;
+                    existing.name = flock.name;
+                    existing.breed = flock.breed;
+                    existing.source = flock.source;
+                    existing.purchaseDate = flock.purchaseDate;
+                    existing.quantityPurchased = flock.quantityPurchased;
+                    existing.cost = flock.cost;
+                    existing.birdsAlive = Math.max(0, existing.birdsAlive + qtyDiff);
+                    await window.putRecord('flocks', existing);
+                }
+            } else {
+                await window.addRecord('flocks', flock);
+            }
             modal.style.display = 'none';
             form.reset();
+            editingFlockId = null;
             loadFlocks();
         } catch(err) {
             console.error("Error saving flock", err);
             alert("Could not save flock.");
         }
     });
+
+    window.editFlockRecord = async (id) => {
+        try {
+            const record = await window.getRecord('flocks', id);
+            if (!record) return;
+            editingFlockId = id;
+            document.querySelector('#modal-add-flock h2').textContent = 'Edit Flock';
+            document.getElementById('flock-name').value = record.name;
+            document.getElementById('flock-breed').value = record.breed;
+            document.getElementById('flock-source').value = record.source || '';
+            document.getElementById('flock-date').value = record.purchaseDate;
+            document.getElementById('flock-qty').value = record.quantityPurchased;
+            document.getElementById('flock-cost').value = record.cost;
+            modal.style.display = 'flex';
+        } catch (err) {
+            console.error("Error loading record for edit", err);
+        }
+    };
+
+    window.deleteFlockRecord = async (id) => {
+        if(confirm("Are you sure you want to delete this flock? This action does not delete associated eggs, feed, or finance records.")) {
+            try {
+                await window.deleteRecord('flocks', id);
+                loadFlocks();
+            } catch (err) {
+                console.error("Error deleting flock", err);
+            }
+        }
+    };
 });
 
 async function loadFlocks() {
@@ -67,7 +117,9 @@ async function loadFlocks() {
                 <td>${flock.quantityPurchased}</td>
                 <td>${flock.birdsAlive}</td>
                 <td>
-                    <button class="btn" style="padding: 5px 10px; font-size: 12px;" onclick="window.openFlockDetails(${flock.id})">View/Edit</button>
+                    <button class="btn btn-icon" onclick="window.editFlockRecord(${flock.id})" title="Edit"><i class="ph ph-pencil-simple"></i></button>
+                    <button class="btn btn-icon" onclick="window.deleteFlockRecord(${flock.id})" title="Delete" style="color: #e53935;"><i class="ph ph-trash"></i></button>
+                    <button class="btn" style="padding: 5px 10px; font-size: 12px; margin-left: 5px;" onclick="window.openFlockDetails(${flock.id})">Details</button>
                 </td>
             `;
             tableBody.appendChild(tr);
