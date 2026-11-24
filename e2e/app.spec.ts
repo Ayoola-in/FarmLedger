@@ -121,7 +121,7 @@ test('new farm: costs, sales and credit add up correctly, and survive a reload',
   await page.goto('/app/flocks');
   await page.getByRole('link', { name: /Batch One/ }).click();
   await expect(page.locator('.tile', { hasText: 'Birds alive' })).toContainText('90');
-  await page.getByRole('button', { name: 'Edit' }).click();
+  await page.getByRole('button', { name: 'Edit', exact: true }).click();
   dialog = page.getByRole('dialog');
   await expect(dialog.getByLabel('Total purchase cost')).toHaveValue('200000');
   await dialog.getByLabel('Total purchase cost').fill('300000');
@@ -204,7 +204,7 @@ test('the whole app keeps working offline, including saving and reloading', asyn
   await page.getByRole('dialog').getByRole('button', { name: 'Save' }).click();
   await expect(page.getByRole('dialog')).toBeHidden();
   await page.reload();
-  await expect(page.getByRole('cell', { name: '123', exact: true }).first()).toBeVisible();
+  await expect(page.getByRole('cell', { name: /^123( eggs)?$/ }).first()).toBeVisible();
   await context.setOffline(false);
 });
 

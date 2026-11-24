@@ -1,13 +1,14 @@
 import { CurrencyCircleDollar, PencilSimple, Plus, Receipt, Trash, Users, WhatsappLogo } from '@phosphor-icons/react';
 import { useMemo, useState } from 'react';
 import { formatDay, startOfMonth } from '../domain/dates';
-import { saleReceipt, whatsappLink } from '../domain/exports';
+import { saleReceipt, toCsv, whatsappLink } from '../domain/exports';
 import { profitAndLoss, saleBalance, salePaid } from '../domain/metrics';
 import { formatMoney } from '../domain/money';
 import type { Sale } from '../domain/types';
 import { useFarm } from '../ui/farm';
 import { saleCategoryLabel, useForms } from '../ui/forms';
-import { Empty, PageHead, Tile } from '../ui/kit';
+import { FilterBar, matches, periodRange, type Period } from '../ui/filters';
+import { download, Empty, PageHead, Tile } from '../ui/kit';
 
 type Tab = 'sales' | 'expenses' | 'owed' | 'customers';
 const PAGE = 25;
@@ -23,6 +24,9 @@ export default function Finance() {
   const forms = useForms();
   const [tab, setTab] = useState<Tab>('sales');
   const [limit, setLimit] = useState(PAGE);
+  const [query, setQuery] = useState('');
+  const [period, setPeriod] = useState<Period>('all');
+  const [kind, setKind] = useState('');
 
   const customer = useMemo(() => new Map(records.customers.map((c) => [c.id, c])), [records.customers]);
   const month = useMemo(() => profitAndLoss(records, startOfMonth(today), today), [records, today]);
@@ -30,6 +34,50 @@ export default function Finance() {
   const expenses = useMemo(() => [...records.expenses].sort((a, b) => b.date.localeCompare(a.date)), [records.expenses]);
   const owing = useMemo(() => sales.filter((s) => saleBalance(s, records.payments) > 0), [sales, records.payments]);
   const totalOwed = owing.reduce((n, s) => n + saleBalance(s, records.payments), 0);
+
+  const range = periodRange(period, today);
+  const buyerName = (sale: Sale) => (sale.customer_id ? customer.get(sale.customer_id)?.name : undefined) ?? 'Walk-in';
+  const shownSales = sales.filter((s) => s.date >= range.from && s.date <= range.to && (!kind || s.category === kind)
+    && matches(query, s.description, buyerName(s), saleCategoryLabel(s.category)));
+  const shownExpenses = expenses.filter((e) => e.date >= range.from && e.date <= range.to && (!kind || e.category === kind)
+    && matches(query, e.category, e.description, e.vendor));
+  const expenseCategories = [...new Set(expenses.map((e) => e.category))].sort();
+  const shownTotal = tab === 'sales'
+    ? shownSales.reduce((n, s) => n + s.amount_kobo, 0)
+    : shownExpenses.reduce((n, e) => n + e.amount_kobo, 0);
+  const flockName = new Map(records.flocks.map((f) => [f.id, f.name]));
+
+  const exportCsv = () => {
+    const span = period === 'all' ? 'all' : `${range.from}-to-${range.to}`;
+    if (tab === 'sales') {
+      download(`farmledger-sales-${span}.csv`, toCsv([
+        ['Date', 'Category', 'Description', 'Quantity', 'Customer', 'Flock', 'Total (NGN)', 'Paid (NGN)', 'Balance (NGN)'],
+        ...shownSales.map((s) => [s.date, saleCategoryLabel(s.category), s.description, s.quantity, buyerName(s), s.flock_id ? flockName.get(s.flock_id) : '',
+          s.amount_kobo / 100, salePaid(s, records.payments) / 100, saleBalance(s, records.payments) / 100]),
+      ]), 'text/csv;charset=utf-8');
+    } else {
+      download(`farmledger-expenses-${span}.csv`, toCsv([
+        ['Date', 'Category', 'Paid to', 'Note', 'Flock', 'Amount (NGN)'],
+        ...shownExpenses.map((e) => [e.date, e.category, e.vendor, e.description, e.flock_id ? flockName.get(e.flock_id) : '', e.amount_kobo / 100]),
+      ]), 'text/csv;charset=utf-8');
+    }
+  };
+  const filtering = query.trim() !== '' || period !== 'all' || kind !== '';
+  const filterBar = (count: number, noun: string, options: { value: string; label: string }[]) => (
+    <FilterBar
+      search={{ value: query, onChange: (v) => { setQuery(v); setLimit(PAGE); }, placeholder: tab === 'sales' ? 'Search customer or note' : 'Search category, payee or note' }}
+      select={{ label: 'Category', value: kind, onChange: (v) => { setKind(v); setLimit(PAGE); }, options: [{ value: '', label: 'All categories' }, ...options] }}
+      period={{ value: period, onChange: (v) => { setPeriod(v); setLimit(PAGE); } }}
+      onExport={count > 0 ? exportCsv : undefined}
+      summary={filtering ? <>{count} {noun}{count === 1 ? '' : 's'} · <strong className="num">{formatMoney(shownTotal)}</strong></> : undefined}
+    />
+  );
+  const noMatch = (
+    <div className="empty">
+      <p>Nothing matches these filters.</p>
+      <button type="button" className="btn btn-sm" onClick={() => { setQuery(''); setPeriod('all'); setKind(''); }}>Clear filters</button>
+    </div>
+  );
 
   const shareLink = (sale: Sale) => {
     const buyer = sale.customer_id ? customer.get(sale.customer_id) : undefined;
@@ -64,28 +112,30 @@ export default function Finance() {
 
       <div className="segments" role="tablist" aria-label="Finance records">
         {([['sales', 'Sales'], ['expenses', 'Expenses'], ['owed', `Owed (${owing.length})`], ['customers', 'Customers']] as [Tab, string][]).map(([id, label]) => (
-          <button key={id} type="button" role="tab" className="segment" aria-selected={tab === id} onClick={() => { setTab(id); setLimit(PAGE); }}>{label}</button>
+          <button key={id} type="button" role="tab" className="segment" aria-selected={tab === id} onClick={() => { setTab(id); setLimit(PAGE); setKind(''); }}>{label}</button>
         ))}
       </div>
 
       <section className="card">
         {tab === 'sales' && (sales.length === 0 ? (
           <Empty icon={<CurrencyCircleDollar size={26} />} title="No sales yet" body="Record a sale to start tracking revenue and who owes you." />
-        ) : (
+        ) : (<>
+          {filterBar(shownSales.length, 'sale', (['eggs', 'birds', 'manure', 'other'] as const).map((c) => ({ value: c, label: saleCategoryLabel(c) })))}
+          {shownSales.length === 0 ? noMatch : (
           <div className="table-wrap">
-            <table>
+            <table className="rtable">
               <thead><tr><th>Date</th><th>Sale</th><th className="hide-sm">Customer</th><th className="r">Total</th><th>Status</th><th><span className="sr-only">Actions</span></th></tr></thead>
               <tbody>
-                {sales.slice(0, limit).map((sale) => {
+                {shownSales.slice(0, limit).map((sale) => {
                   const balance = saleBalance(sale, records.payments);
                   return (
                     <tr key={sale.id}>
-                      <td className="nowrap">{formatDay(sale.date)}</td>
-                      <td>{saleLabel(sale)}</td>
-                      <td className="hide-sm">{sale.customer_id ? customer.get(sale.customer_id)?.name ?? '–' : 'Walk-in'}</td>
-                      <td className="r">{formatMoney(sale.amount_kobo)}</td>
-                      <td>{balance > 0 ? <span className="badge warn">{formatMoney(balance)} owed</span> : <span className="badge good">Paid</span>}</td>
-                      <td>
+                      <td className="nowrap">{formatDay(sale.date)}<span className="show-sm"> · {buyerName(sale)}</span></td>
+                      <td className="c-main">{saleLabel(sale)}</td>
+                      <td className="hide-sm">{buyerName(sale)}</td>
+                      <td className="r c-end">{formatMoney(sale.amount_kobo)}</td>
+                      <td className="c-end2">{balance > 0 ? <span className="badge warn">{formatMoney(balance)} owed</span> : <span className="badge good">Paid</span>}</td>
+                      <td className="c-act">
                         <div className="actions">
                           <a className="btn btn-ghost btn-sm btn-icon" href={shareLink(sale)} target="_blank" rel="noreferrer" aria-label={`Send receipt for ${saleLabel(sale)} on WhatsApp`}><WhatsappLogo size={17} /></a>
                           <button type="button" className="btn btn-ghost btn-sm btn-icon" aria-label={`Edit ${saleLabel(sale)}`} onClick={() => forms.open({ type: 'sale', record: sale })}><PencilSimple size={17} /></button>
@@ -98,22 +148,25 @@ export default function Finance() {
               </tbody>
             </table>
           </div>
-        ))}
+          )}
+        </>))}
 
         {tab === 'expenses' && (expenses.length === 0 ? (
           <Empty icon={<Receipt size={26} />} title="No expenses yet" body="Flock, feed and treatment costs appear here automatically. Add anything else, like wages or diesel." />
-        ) : (
+        ) : (<>
+          {filterBar(shownExpenses.length, 'expense', expenseCategories.map((c) => ({ value: c, label: c })))}
+          {shownExpenses.length === 0 ? noMatch : (
           <div className="table-wrap">
-            <table>
+            <table className="rtable">
               <thead><tr><th>Date</th><th>Category</th><th className="hide-sm">Details</th><th className="r">Amount</th><th><span className="sr-only">Actions</span></th></tr></thead>
               <tbody>
-                {expenses.slice(0, limit).map((expense) => (
+                {shownExpenses.slice(0, limit).map((expense) => (
                   <tr key={expense.id}>
-                    <td className="nowrap">{formatDay(expense.date)}</td>
-                    <td>{expense.category}</td>
+                    <td className="nowrap">{formatDay(expense.date)}{(expense.description || expense.vendor) && <span className="show-sm"> · {expense.description || expense.vendor}</span>}</td>
+                    <td className="c-main">{expense.category}</td>
                     <td className="hide-sm">{expense.description || expense.vendor || '–'}</td>
-                    <td className="r">{formatMoney(expense.amount_kobo)}</td>
-                    <td>
+                    <td className="r c-end">{formatMoney(expense.amount_kobo)}</td>
+                    <td className="c-act">
                       {expense.source_table ? (
                         <span className="small muted" title={LINK_NOTE[expense.source_table]}>Linked</span>
                       ) : (
@@ -128,7 +181,8 @@ export default function Finance() {
               </tbody>
             </table>
           </div>
-        ))}
+          )}
+        </>))}
 
         {tab === 'owed' && (owing.length === 0 ? (
           <Empty icon={<CurrencyCircleDollar size={26} />} title="Nobody owes you" body="Sales on credit will appear here until they’re paid." />
@@ -151,7 +205,8 @@ export default function Finance() {
           </ul>
         ))}
 
-        {((tab === 'sales' && sales.length > limit) || (tab === 'expenses' && expenses.length > limit)) && (
+        {((tab === 'sales' && shownSales.length > limit) || (tab === 'expenses' && shownExpenses.length > limit)) && (
+
           <div className="card-pad"><button type="button" className="btn btn-block" onClick={() => setLimit(limit + PAGE)}>Show more</button></div>
         )}
 

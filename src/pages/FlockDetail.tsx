@@ -1,9 +1,11 @@
-import { ArrowLeft, CurrencyCircleDollar, Egg, FirstAidKit, Grains, PencilSimple, HeartBreak, Trash } from '@phosphor-icons/react';
+import { ArrowCounterClockwise, ArrowLeft, CurrencyCircleDollar, Egg, FirstAidKit, Grains, PencilSimple, HeartBreak, Trash } from '@phosphor-icons/react';
 import { useMemo, useState, type ReactNode } from 'react';
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom';
 import { addDays, formatDay, formatDayShort, lastNDays } from '../domain/dates';
 import { birdsAlive, flockAgeDays, flockPnl, layingRate, mortalityRate } from '../domain/metrics';
 import { formatMoney } from '../domain/money';
+import type { Base, SyncTable } from '../domain/types';
+import type { FormRequest } from '../ui/forms';
 import { LineChart } from '../ui/charts';
 import { useFarm } from '../ui/farm';
 import { useForms } from '../ui/forms';
@@ -15,14 +17,19 @@ interface TimelineItem {
   icon: ReactNode;
   title: string;
   detail?: string;
+  /** Present when the entry can be corrected from here. */
+  edit?: { row: Base; table: SyncTable; label: string; form: FormRequest };
 }
+
+const TIMELINE_STEP = 25;
 
 export default function FlockDetail() {
   const { id } = useParams();
-  const { records, today, canManage, save, remove } = useFarm();
+  const { records, today, canManage, canEdit, save, remove } = useFarm();
   const forms = useForms();
   const navigate = useNavigate();
   const [confirm, setConfirm] = useState<'close' | 'delete' | null>(null);
+  const [shown, setShown] = useState(TIMELINE_STEP);
   const flock = records.flocks.find((f) => f.id === id);
 
   const timeline = useMemo<TimelineItem[]>(() => {
@@ -30,15 +37,18 @@ export default function FlockDetail() {
     const items: TimelineItem[] = [
       ...records.mortality_logs.filter((m) => m.flock_id === flock.id).map((m) => ({
         key: m.id, date: m.date, icon: <HeartBreak size={20} />, title: `${m.quantity} bird${m.quantity === 1 ? '' : 's'} died`, detail: m.cause ?? undefined,
+        edit: { row: m, table: 'mortality_logs' as const, label: 'Death record', form: { type: 'mortality' as const, record: m } },
       })),
       ...records.health_events.filter((h) => h.flock_id === flock.id).map((h) => ({
         key: h.id, date: h.date, icon: <FirstAidKit size={20} />, title: h.product, detail: h.kind === 'vaccine' ? 'Vaccine' : 'Medication',
+        edit: { row: h, table: 'health_events' as const, label: 'Treatment', form: { type: 'health' as const, record: h } },
       })),
       ...records.sales.filter((s) => s.flock_id === flock.id && s.category === 'birds').map((s) => ({
         key: s.id, date: s.date, icon: <CurrencyCircleDollar size={20} />, title: `${s.quantity} birds sold`, detail: canManage ? formatMoney(s.amount_kobo) : undefined,
+        edit: canManage ? { row: s, table: 'sales' as const, label: 'Sale', form: { type: 'sale' as const, record: s } } : undefined,
       })),
     ];
-    return items.sort((a, b) => b.date.localeCompare(a.date)).slice(0, 25);
+    return items.sort((a, b) => b.date.localeCompare(a.date));
   }, [records, flock, canManage]);
 
   if (!flock) return <Navigate to="/app/flocks" replace />;
@@ -62,6 +72,9 @@ export default function FlockDetail() {
         >
           {canManage && <button type="button" className="btn" onClick={() => forms.open({ type: 'flock', record: flock })}><PencilSimple size={18} />Edit</button>}
           {canManage && isActive && <button type="button" className="btn" onClick={() => setConfirm('close')}>Close flock</button>}
+          {canManage && !isActive && (
+            <button type="button" className="btn" onClick={() => void save('flocks', { ...flock, status: 'active', closed_on: null })}><ArrowCounterClockwise size={18} />Reopen</button>
+          )}
           {canManage && <button type="button" className="btn btn-icon" aria-label="Delete flock" onClick={() => setConfirm('delete')}><Trash size={18} /></button>}
         </PageHead>
       </div>
@@ -122,15 +135,25 @@ export default function FlockDetail() {
           <p className="card-pad muted">No deaths, treatments or bird sales recorded yet.</p>
         ) : (
           <ul className="list" style={{ marginTop: 8 }}>
-            {timeline.map((item) => (
+            {timeline.slice(0, shown).map((item) => (
               <li key={item.key}>
                 <span className="icon-chip">{item.icon}</span>
                 <div className="grow"><strong>{item.title}</strong>{item.detail && <div className="small muted">{item.detail}</div>}</div>
                 <span className="small muted nowrap">{formatDayShort(item.date)}</span>
+                {item.edit && canEdit(item.edit.row) && (
+                  <div className="actions">
+                    <button type="button" className="btn btn-ghost btn-sm btn-icon" aria-label={`Edit ${item.title}`} onClick={() => item.edit && forms.open(item.edit.form)}><PencilSimple size={17} /></button>
+                    <button type="button" className="btn btn-ghost btn-sm btn-icon" aria-label={`Delete ${item.title}`} onClick={() => item.edit && void remove(item.edit.table, item.edit.row.id, item.edit.label)}><Trash size={17} /></button>
+                  </div>
+                )}
               </li>
             ))}
           </ul>
         )}
+        {timeline.length > shown && (
+          <div className="card-pad"><button type="button" className="btn btn-block" onClick={() => setShown(shown + TIMELINE_STEP)}>Show more</button></div>
+        )}
+
       </section>
 
       {confirm === 'close' && (

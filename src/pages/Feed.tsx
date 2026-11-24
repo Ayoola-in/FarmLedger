@@ -1,17 +1,24 @@
 import { Grains, PencilSimple, Plus, Trash } from '@phosphor-icons/react';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { formatDay } from '../domain/dates';
 import { feedStock } from '../domain/metrics';
 import { useFarm } from '../ui/farm';
 import { useForms } from '../ui/forms';
 import { Empty, PageHead } from '../ui/kit';
 
+const PAGE = 20;
+
 export default function Feed() {
+
   const { records, today, canManage, canEdit, remove, workspace } = useFarm();
   const forms = useForms();
   const stock = useMemo(() => feedStock(records.feed_purchases, records.feed_usage, today), [records, today]);
-  const purchases = [...records.feed_purchases].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 30);
-  const usage = [...records.feed_usage].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 30);
+  const [usageLimit, setUsageLimit] = useState(PAGE);
+  const [purchaseLimit, setPurchaseLimit] = useState(PAGE);
+  const allPurchases = useMemo(() => [...records.feed_purchases].sort((a, b) => b.date.localeCompare(a.date) || b.created_at.localeCompare(a.created_at)), [records.feed_purchases]);
+  const allUsage = useMemo(() => [...records.feed_usage].sort((a, b) => b.date.localeCompare(a.date) || b.created_at.localeCompare(a.created_at)), [records.feed_usage]);
+  const purchases = allPurchases.slice(0, purchaseLimit);
+  const usage = allUsage.slice(0, usageLimit);
   const flockName = new Map(records.flocks.map((f) => [f.id, f.name]));
   const low = workspace.farm.low_feed_days;
 
@@ -52,17 +59,17 @@ export default function Feed() {
         <section className="card">
           <div className="card-head"><h2>Recent use</h2></div>
           {usage.length === 0 ? <p className="card-pad muted">Nothing logged yet.</p> : (
-            <div className="table-wrap" style={{ maxHeight: 420, overflowY: 'auto' }}>
-              <table>
+            <div className="table-wrap">
+              <table className="rtable">
                 <thead><tr><th>Date</th><th>Flock</th><th>Type</th><th className="r">Kg</th><th><span className="sr-only">Actions</span></th></tr></thead>
                 <tbody>
                   {usage.map((u) => (
                     <tr key={u.id}>
-                      <td className="nowrap">{formatDay(u.date)}</td>
-                      <td>{flockName.get(u.flock_id) ?? 'Removed flock'}</td>
-                      <td>{u.feed_type}</td>
-                      <td className="r">{u.quantity_kg.toLocaleString()}</td>
-                      <td>
+                      <td className="nowrap">{formatDay(u.date)}<span className="show-sm"> · {flockName.get(u.flock_id) ?? 'Removed flock'}</span></td>
+                      <td className="hide-sm">{flockName.get(u.flock_id) ?? 'Removed flock'}</td>
+                      <td className="c-main">{u.feed_type}</td>
+                      <td className="r c-end">{u.quantity_kg.toLocaleString()}<span className="show-sm"> kg</span></td>
+                      <td className="c-act">
                         {canEdit(u) && (
                           <div className="actions">
                             <button type="button" className="btn btn-ghost btn-sm btn-icon" aria-label="Edit feed use" onClick={() => forms.open({ type: 'feed-usage', record: u })}><PencilSimple size={17} /></button>
@@ -76,21 +83,24 @@ export default function Feed() {
               </table>
             </div>
           )}
+          {allUsage.length > usageLimit && (
+            <div className="card-pad"><button type="button" className="btn btn-block" onClick={() => setUsageLimit(usageLimit + PAGE)}>Show more</button></div>
+          )}
         </section>
         <section className="card">
           <div className="card-head"><h2>Purchases</h2></div>
           {purchases.length === 0 ? <p className="card-pad muted">Nothing recorded yet.</p> : (
-            <div className="table-wrap" style={{ maxHeight: 420, overflowY: 'auto' }}>
-              <table>
+            <div className="table-wrap">
+              <table className="rtable">
                 <thead><tr><th>Date</th><th>Type</th><th className="hide-sm">Supplier</th><th className="r">Kg</th><th><span className="sr-only">Actions</span></th></tr></thead>
                 <tbody>
                   {purchases.map((p) => (
                     <tr key={p.id}>
-                      <td className="nowrap">{formatDay(p.date)}</td>
-                      <td>{p.feed_type}</td>
+                      <td className="nowrap">{formatDay(p.date)}{p.supplier && <span className="show-sm"> · {p.supplier}</span>}</td>
+                      <td className="c-main">{p.feed_type}</td>
                       <td className="hide-sm">{p.supplier ?? '–'}</td>
-                      <td className="r">{p.quantity_kg.toLocaleString()}</td>
-                      <td>
+                      <td className="r c-end">{p.quantity_kg.toLocaleString()}<span className="show-sm"> kg</span></td>
+                      <td className="c-act">
                         {canManage && (
                           <div className="actions">
                             <button type="button" className="btn btn-ghost btn-sm btn-icon" aria-label="Edit purchase" onClick={() => forms.open({ type: 'feed-purchase', record: p })}><PencilSimple size={17} /></button>
@@ -103,6 +113,9 @@ export default function Feed() {
                 </tbody>
               </table>
             </div>
+          )}
+          {allPurchases.length > purchaseLimit && (
+            <div className="card-pad"><button type="button" className="btn btn-block" onClick={() => setPurchaseLimit(purchaseLimit + PAGE)}>Show more</button></div>
           )}
         </section>
       </div>

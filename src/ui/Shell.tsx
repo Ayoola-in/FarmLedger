@@ -119,7 +119,14 @@ export function Shell({ children }: { children: ReactNode }) {
         <div className="sidebar-foot">
           <button type="button" className="btn btn-primary" onClick={() => setQuickOpen(true)}><Plus size={18} weight="bold" />Quick log</button>
           <SyncPill />
-          <div className="small muted" style={{ padding: '2px 8px' }}>{farmName}</div>
+          <Link to="/app/settings" className="account-chip">
+            <span className="avatar" aria-hidden="true">{(workspace?.member.display_name || farmName || '?').trim().charAt(0).toUpperCase()}</span>
+            <span className="grow">
+              <span className="account-farm">{farmName}</span>
+              <span className="account-who">{workspace?.member.display_name} · {workspace?.member.role}</span>
+            </span>
+          </Link>
+
         </div>
       </nav>
 

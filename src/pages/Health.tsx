@@ -1,5 +1,5 @@
 import { CheckCircle, FirstAidKit, PencilSimple, Plus, Trash, WarningCircle } from '@phosphor-icons/react';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { formatDay } from '../domain/dates';
 import { dosesDue } from '../domain/health';
 import { useFarm } from '../ui/farm';
@@ -16,7 +16,9 @@ export default function Health() {
   const { records, today, canManage, canEdit, remove } = useFarm();
   const forms = useForms();
   const due = useMemo(() => dosesDue(records, today).filter((d) => d.daysUntil <= 30), [records, today]);
-  const events = [...records.health_events].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 40);
+  const [limit, setLimit] = useState(20);
+  const allEvents = useMemo(() => [...records.health_events].sort((a, b) => b.date.localeCompare(a.date)), [records.health_events]);
+  const events = allEvents.slice(0, limit);
   const schedule = [...records.schedule_items].sort((a, b) => a.age_days - b.age_days);
   const flockName = new Map(records.flocks.map((f) => [f.id, f.name]));
 
@@ -72,6 +74,9 @@ export default function Health() {
               ))}
             </ul>
           )}
+          {allEvents.length > limit && (
+            <div className="card-pad"><button type="button" className="btn btn-block" onClick={() => setLimit(limit + 20)}>Show more</button></div>
+          )}
         </section>
 
         <section className="card">
@@ -82,8 +87,10 @@ export default function Health() {
           <p className="small muted" style={{ padding: '6px 18px 10px' }}>
             A general starting point, not veterinary advice. Disease risks vary by area, so review this with your vet.
           </p>
+          {schedule.length === 0 && <p className="card-pad muted">No vaccinations scheduled. Add the ones your vet recommends to get due-date reminders.</p>}
           <ul className="list">
             {schedule.map((item) => (
+
               <li key={item.id}>
                 <div className="grow">
                   <strong>{item.name}</strong>

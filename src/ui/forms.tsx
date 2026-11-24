@@ -3,7 +3,8 @@ import { createContext, useContext, useMemo, useState, type ReactNode } from 're
 import { linkedCost, newId } from '../data/repo';
 import { checkEggEntry } from '../domain/health';
 import { birdsAlive, feedStock, saleBalance } from '../domain/metrics';
-import { koboToInput, parseNaira } from '../domain/money';
+import { formatDay } from '../domain/dates';
+import { formatMoney, koboToInput, parseNaira } from '../domain/money';
 import type { Customer, EggLog, Expense, FeedPurchase, FeedUsage, Flock, HealthEvent, MortalityLog, Sale, SaleCategory, ScheduleItem } from '../domain/types';
 import { useFarm } from './farm';
 import { CountField, DecimalField, Field, FormSheet, MoneyField, SelectField, useToast } from './kit';
@@ -430,6 +431,7 @@ function SaleForm({ record, flockId, category: initialCategory, onClose }: { rec
           else if (qty && qty > alive) e.quantity = `Only ${alive} birds are alive in this flock.`;
           else if (qty && !Number.isInteger(qty)) e.quantity = 'Whole birds only.';
         }
+        if (record && kobo !== null && kobo < paidBefore) e.amount = `${formatMoney(paidBefore)} has already been paid on this sale. Remove a payment first to charge less.`;
         if (!record && paid === 'part' && (partial === null || (kobo !== null && partial > kobo))) e.paid = 'Enter an amount up to the sale total.';
         setErrors(e);
         if (Object.keys(e).length) return;
@@ -469,7 +471,7 @@ function SaleForm({ record, flockId, category: initialCategory, onClose }: { rec
         <SelectField label="Payment" value={paid} onChange={(v) => setPaid(v as typeof paid)} options={[{ value: 'full', label: 'Paid in full' }, { value: 'part', label: 'Part paid' }, { value: 'none', label: 'On credit (not paid yet)' }]} />
       )}
       {!record && paid === 'part' && <MoneyField label="Amount paid now" value={paidAmount} onChange={setPaidAmount} error={errors.paid} />}
-      {record && paidBefore > 0 && <p className="small muted">Payments already recorded stay on this sale.</p>}
+      {record && <SalePayments sale={record} />}
       <Field label="Note" value={description} onChange={setDescription} />
     </FormSheet>
   );
@@ -514,6 +516,27 @@ function ExpenseForm({ record, flockId, onClose }: { record?: Expense; flockId?:
   );
 }
 
+/** Payments on a sale, each removable (with Undo) when entered wrongly. */
+function SalePayments({ sale }: { sale: Sale }) {
+  const farm = useFarm();
+  const payments = farm.records.payments.filter((p) => p.sale_id === sale.id).sort((a, b) => a.date.localeCompare(b.date));
+  if (payments.length === 0) return <p className="small muted">No payments recorded yet. Use Record payment on the Owed tab when the customer pays.</p>;
+  return (
+    <div className="field">
+      <span className="field-label">Payments received</span>
+      <ul className="mini-list">
+        {payments.map((p) => (
+          <li key={p.id}>
+            <span>{formatDay(p.date)}</span>
+            <strong className="num">{formatMoney(p.amount_kobo)}</strong>
+            <button type="button" className="btn btn-ghost btn-sm" onClick={() => void farm.remove('payments', p.id, 'Payment')}>Remove</button>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
 function PaymentForm({ sale, onClose }: { sale: Sale; onClose: () => void }) {
   const farm = useFarm();
   const toast = useToast();
@@ -550,6 +573,9 @@ function CustomerForm({ record, onClose }: { record?: Customer; onClose: () => v
     <FormSheet
       title={record ? 'Edit customer' : 'Add customer'}
       onClose={onClose}
+      extraAction={record ? (
+        <button type="button" className="btn btn-danger" onClick={() => { void farm.remove('customers', record.id, 'Customer'); onClose(); }}>Delete</button>
+      ) : undefined}
       onSubmit={async () => {
         if (!name.trim()) return setError('Enter the customer’s name.');
         await farm.save('customers', { id: record?.id, name: name.trim(), phone: phone.trim() || null });
@@ -559,6 +585,7 @@ function CustomerForm({ record, onClose }: { record?: Customer; onClose: () => v
     >
       <Field label="Name" value={name} onChange={setName} error={error} autoFocus />
       <Field label="Phone" type="tel" value={phone} onChange={setPhone} placeholder="0803 000 0000" hint="Used to send receipts on WhatsApp." />
+      {record && <p className="small muted">Deleting a customer keeps their sales, which then show as walk-in.</p>}
     </FormSheet>
   );
 }
